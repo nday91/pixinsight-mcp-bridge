@@ -291,12 +291,11 @@ class CommandDispatcher {
             throw "Process '" + processId + "' cannot execute on view '" + viewId + "'";
          }
 
-         view.beginProcess();
-         try {
-            P.executeOn(view);
-         } finally {
-            view.endProcess();
-         }
+         // executeOn() manages its own beginProcess/endProcess transaction
+         // internally - wrapping it in a manual begin/end pair here nests
+         // the transaction and breaks processes that change view geometry
+         // (Crop, FastRotation, etc.) with "Invalid view update termination".
+         P.executeOn(view);
 
          return {
             success: true,
