@@ -58,6 +58,10 @@ class CommandDispatcher {
       this._handlers["get_statistics"] = function(params) {
          return self._getStatistics(params);
       };
+
+      this._handlers["load_image"] = function(params) {
+         return self._loadImage(params);
+      };
    }
 
    /**
@@ -580,6 +584,51 @@ class CommandDispatcher {
          height: img.height,
          numberOfChannels: numChannels,
          channels: channels
+      };
+   }
+
+   // =========================================================================
+   // load_image - Open an image file from disk as a new view
+   // =========================================================================
+
+   _loadImage(params) {
+      var filePath = params.filePath;
+      if (!filePath) {
+         throw "filePath is required";
+      }
+      if (!File.exists(filePath)) {
+         throw "File not found: " + filePath;
+      }
+
+      // ImageWindow.open() returns an array because a single file can
+      // contain multiple images (e.g. multi-HDU FITS); windows are created
+      // hidden and must be shown explicitly to appear as open views.
+      var windows = ImageWindow.open(filePath);
+      if (!windows || windows.length === 0) {
+         throw "Failed to load image: " + filePath;
+      }
+
+      var views = [];
+      for (var i = 0; i < windows.length; i++) {
+         var w = windows[i];
+         w.show();
+         var v = w.mainView;
+         var img = v.image;
+         views.push({
+            viewId: v.id,
+            fullId: v.fullId,
+            width: img.width,
+            height: img.height,
+            numberOfChannels: img.numberOfChannels,
+            isColor: img.isColor,
+            bitsPerSample: img.bitsPerSample
+         });
+      }
+
+      return {
+         filePath: filePath,
+         windowCount: windows.length,
+         views: views
       };
    }
 }

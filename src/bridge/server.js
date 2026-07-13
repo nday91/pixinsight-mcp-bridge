@@ -170,6 +170,16 @@ function createMockHandler(command, callback) {
         note: "Running in standalone mode - showing sample statistics"
       });
       break;
+    case "load_image":
+      callback(null, {
+        filePath: command.params.filePath,
+        windowCount: 1,
+        views: [
+          { viewId: "Loaded01", fullId: "Loaded01", width: 4096, height: 4096, numberOfChannels: 3, isColor: true, bitsPerSample: 32 }
+        ],
+        note: "Running in standalone mode - simulating a loaded image"
+      });
+      break;
     default:
       callback(new Error("Unknown command: " + command.command));
   }

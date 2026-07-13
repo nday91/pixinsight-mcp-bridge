@@ -110,6 +110,20 @@ var TOOLS = [
         }
       }
     }
+  },
+  {
+    name: "load_image",
+    description: "Load an image file from disk into PixInsight as a new view (e.g. .xisf, .fits, .tif).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Absolute path to the image file to load."
+        }
+      },
+      required: ["filePath"]
+    }
   }
 ];
 
@@ -325,6 +339,11 @@ MCPHandler.prototype._validateToolParams = function (toolName, args) {
     case "set_focused_view":
       if (!args.viewId || typeof args.viewId !== "string") {
         return "set_focused_view requires a 'viewId' string parameter";
+      }
+      break;
+    case "load_image":
+      if (!args.filePath || typeof args.filePath !== "string") {
+        return "load_image requires a 'filePath' string parameter";
       }
       break;
   }

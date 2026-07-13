@@ -86,6 +86,7 @@ function createMockPI() {
 
     this.currentView = this.mainView;
     this.bringToFront = function () { activeWindowId = id; };
+    this.show = function () { };
   }
 
   var windows = Object.keys(mockImages).map(function (id) {
@@ -101,6 +102,16 @@ function createMockPI() {
           if (windows[i].id === id) return windows[i];
         }
         return { isNull: true };
+      },
+      open: function (filePath) {
+        if (filePath.indexOf("nonexistent") !== -1) {
+          return [];
+        }
+        var id = "Loaded" + (windows.length + 1);
+        mockImages[id] = { width: 800, height: 600, numberOfChannels: 3, isColor: true, bitsPerSample: 32 };
+        var w = new MockImageWindow(id);
+        windows.push(w);
+        return [w];
       }
     },
     View: {
@@ -153,7 +164,7 @@ function loadHandlers() {
     View: mockPI.View,
     Console: mockPI.Console,
     File: {
-      exists: function () { return true; },
+      exists: function (filePath) { return filePath.indexOf("missing") === -1; },
       systemTempDirectory: "/tmp",
       readFile: function () {
         // Return a mock ByteArray with toBase64
@@ -548,5 +559,44 @@ describe("CommandDispatcher - get_statistics", function () {
     var result = dispatcher.dispatch("get_statistics", { viewId: "NoSuchView" });
     assert.ok(result.error);
     assert.ok(result.error.message.indexOf("View not found") !== -1);
+  });
+});
+
+describe("CommandDispatcher - load_image", function () {
+  it("loads a file and returns the resulting view metadata", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("load_image", { filePath: "/images/new.xisf" });
+    assert.ok(result.result);
+    assert.strictEqual(result.result.filePath, "/images/new.xisf");
+    assert.strictEqual(result.result.windowCount, 1);
+    assert.strictEqual(result.result.views.length, 1);
+    assert.strictEqual(result.result.views[0].width, 800);
+    assert.strictEqual(result.result.views[0].height, 600);
+    assert.strictEqual(result.result.views[0].numberOfChannels, 3);
+  });
+
+  it("returns error when filePath is missing", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("load_image", {});
+    assert.ok(result.error);
+    assert.ok(result.error.message.indexOf("filePath is required") !== -1);
+  });
+
+  it("returns error when the file does not exist on disk", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("load_image", { filePath: "/images/missing.xisf" });
+    assert.ok(result.error);
+    assert.ok(result.error.message.indexOf("File not found") !== -1);
+  });
+
+  it("returns error when ImageWindow.open finds no readable images", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("load_image", { filePath: "/images/nonexistent-format.xisf" });
+    assert.ok(result.error);
+    assert.ok(result.error.message.indexOf("Failed to load image") !== -1);
   });
 });
