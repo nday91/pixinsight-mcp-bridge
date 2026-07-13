@@ -20,11 +20,25 @@ function createMockPI() {
   var mockImages = {
     "Image01": {
       width: 4096, height: 4096, numberOfChannels: 3,
-      isColor: true, bitsPerSample: 32
+      isColor: true, bitsPerSample: 32,
+      selectedChannel: 0,
+      mean: function () { return 0.1; },
+      median: function () { return 0.08; },
+      stdDev: function () { return 0.02; },
+      MAD: function () { return 0.01; },
+      minimum: function () { return 0; },
+      maximum: function () { return 1; }
     },
     "Image02": {
       width: 2048, height: 2048, numberOfChannels: 1,
-      isColor: false, bitsPerSample: 16
+      isColor: false, bitsPerSample: 16,
+      selectedChannel: 0,
+      mean: function () { return 0.2; },
+      median: function () { return 0.15; },
+      stdDev: function () { return 0.03; },
+      MAD: function () { return 0.02; },
+      minimum: function () { return 0; },
+      maximum: function () { return 1; }
     }
   };
 
@@ -491,5 +505,48 @@ describe("CommandDispatcher - get_image_from_view", function () {
     var result = dispatcher.dispatch("get_image_from_view", {});
     assert.ok(result.error);
     assert.ok(result.error.message.indexOf("No active image window") !== -1);
+  });
+});
+
+describe("CommandDispatcher - get_statistics", function () {
+  it("returns per-channel statistics for a specific view", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("get_statistics", { viewId: "Image01" });
+    assert.ok(result.result);
+    assert.strictEqual(result.result.viewId, "Image01");
+    assert.strictEqual(result.result.numberOfChannels, 3);
+    assert.strictEqual(result.result.channels.length, 3);
+    assert.strictEqual(result.result.channels[0].mean, 0.1);
+    assert.strictEqual(result.result.channels[0].median, 0.08);
+    assert.strictEqual(result.result.channels[0].stdDev, 0.02);
+    assert.strictEqual(result.result.channels[0].mad, 0.01);
+    assert.strictEqual(result.result.channels[0].minimum, 0);
+    assert.strictEqual(result.result.channels[0].maximum, 1);
+  });
+
+  it("returns statistics for a single-channel view", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("get_statistics", { viewId: "Image02" });
+    assert.ok(result.result);
+    assert.strictEqual(result.result.numberOfChannels, 1);
+    assert.strictEqual(result.result.channels.length, 1);
+  });
+
+  it("returns statistics for active view when viewId omitted", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("get_statistics", {});
+    assert.ok(result.result);
+    assert.ok(result.result.viewId);
+  });
+
+  it("returns error for non-existent view", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("get_statistics", { viewId: "NoSuchView" });
+    assert.ok(result.error);
+    assert.ok(result.error.message.indexOf("View not found") !== -1);
   });
 });

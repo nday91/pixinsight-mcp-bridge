@@ -155,6 +155,21 @@ function createMockHandler(command, callback) {
         }
       });
       break;
+    case "get_statistics":
+      callback(null, {
+        viewId: command.params.viewId || "Image01",
+        fullId: command.params.viewId || "Image01",
+        width: 4096,
+        height: 4096,
+        numberOfChannels: 3,
+        channels: [
+          { channel: 0, mean: 0.1, median: 0.08, stdDev: 0.02, mad: 0.01, minimum: 0, maximum: 1 },
+          { channel: 1, mean: 0.1, median: 0.08, stdDev: 0.02, mad: 0.01, minimum: 0, maximum: 1 },
+          { channel: 2, mean: 0.1, median: 0.08, stdDev: 0.02, mad: 0.01, minimum: 0, maximum: 1 }
+        ],
+        note: "Running in standalone mode - showing sample statistics"
+      });
+      break;
     default:
       callback(new Error("Unknown command: " + command.command));
   }

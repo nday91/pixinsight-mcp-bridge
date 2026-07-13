@@ -246,7 +246,7 @@ describe("BridgeServer - HTTP endpoints (standalone)", function () {
       assert.strictEqual(err, null);
       var body = JSON.parse(data);
       assert.ok(body.result.tools);
-      assert.strictEqual(body.result.tools.length, 6);
+      assert.strictEqual(body.result.tools.length, 7);
       done();
     });
   });

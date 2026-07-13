@@ -97,6 +97,19 @@ var TOOLS = [
         }
       }
     }
+  },
+  {
+    name: "get_statistics",
+    description: "Compute per-channel image statistics (mean, median, standard deviation, MAD, minimum, maximum) for a view.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        viewId: {
+          type: "string",
+          description: "The ID of the view to analyze (e.g. 'Image01'). If omitted, uses the currently focused view."
+        }
+      }
+    }
   }
 ];
 

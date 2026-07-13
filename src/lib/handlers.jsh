@@ -54,6 +54,29 @@ class CommandDispatcher {
       this._handlers["get_image_from_view"] = function(params) {
          return self._getImageFromView(params);
       };
+
+      this._handlers["get_statistics"] = function(params) {
+         return self._getStatistics(params);
+      };
+   }
+
+   /**
+    * Resolve a view by ID, falling back to the active window's current
+    * view when no viewId is given.
+    */
+   _resolveView(viewId) {
+      if (viewId) {
+         var view = View.viewById(viewId);
+         if (!view || view.isNull) {
+            throw "View not found: " + viewId;
+         }
+         return view;
+      }
+      var w = ImageWindow.activeWindow;
+      if (!w || w.isNull) {
+         throw "No active image window";
+      }
+      return w.currentView;
    }
 
    /**
@@ -118,12 +141,18 @@ class CommandDispatcher {
     * Returns the registry of known PixInsight processes.
     * This is a comprehensive but not exhaustive list.
     * Processes are verified at runtime via eval() to confirm availability.
+    *
+    * Deliberately excluded: Statistics, Blink, DynamicCrop, CloneStamp.
+    * These global identifiers exist and pass the eval()/typeof check, but
+    * they're interactive-only tools with no working ProcessInstance behind
+    * them - canExecuteOn()/canExecuteGlobal() both fail with "Invalid
+    * process instance handle" for any of them. Use get_statistics for
+    * view statistics instead of the Statistics process.
     */
    _getProcessRegistry() {
       return [
          // --- Geometry ---
          { id: "Crop", category: "Geometry", description: "Crop image to specified dimensions" },
-         { id: "DynamicCrop", category: "Geometry", description: "Interactive dynamic crop" },
          { id: "FastRotation", category: "Geometry", description: "Fast 90/180/270 degree rotation and mirroring" },
          { id: "Resample", category: "Geometry", description: "Resample (resize) image" },
          { id: "Rotation", category: "Geometry", description: "Arbitrary angle rotation" },
@@ -210,10 +239,6 @@ class CommandDispatcher {
          { id: "ManualImageSolver", category: "Astrometry", description: "Manual plate solving" },
          { id: "AnnotateImage", category: "Astrometry", description: "Annotate image with catalog objects" },
 
-         // --- Image Inspection ---
-         { id: "Statistics", category: "ImageInspection", description: "Compute image statistics" },
-         { id: "Blink", category: "ImageInspection", description: "Blink comparator" },
-
          // --- File I/O ---
          { id: "ReadImage", category: "FileIO", description: "Read image from file" },
          { id: "WriteImage", category: "FileIO", description: "Write image to file" },
@@ -230,9 +255,6 @@ class CommandDispatcher {
 
          // --- Script Processes (commonly available) ---
          { id: "Script", category: "Scripting", description: "Script execution" },
-
-         // --- Painting ---
-         { id: "CloneStamp", category: "Painting", description: "Clone stamp tool" },
 
          // --- Misc ---
          { id: "Invert", category: "IntensityTransformations", description: "Invert image" },
@@ -450,24 +472,7 @@ class CommandDispatcher {
    // =========================================================================
 
    _getImageFromView(params) {
-      var viewId = params.viewId;
-      var view;
-      var w;
-
-      if (viewId) {
-         view = View.viewById(viewId);
-         if (!view || view.isNull) {
-            throw "View not found: " + viewId;
-         }
-         w = view.window;
-      } else {
-         w = ImageWindow.activeWindow;
-         if (!w || w.isNull) {
-            throw "No active image window";
-         }
-         view = w.currentView;
-      }
-
+      var view = this._resolveView(params.viewId);
       var img = view.image;
 
       // Build a unique temp file path
@@ -531,6 +536,50 @@ class CommandDispatcher {
             isColor: img.isColor,
             bitsPerSample: img.bitsPerSample
          }
+      };
+   }
+
+   // =========================================================================
+   // get_statistics - Compute per-channel image statistics
+   // =========================================================================
+
+   /**
+    * The "Statistics" process is interactive-only (see the exclusion note
+    * on _getProcessRegistry) - it has no working canExecuteOn/canExecuteGlobal.
+    * Per PixInsight's own V8 porting guidance, statistics are computed
+    * directly via Image class methods instead.
+    */
+   _getStatistics(params) {
+      var view = this._resolveView(params.viewId);
+      var img = view.image;
+
+      var numChannels = img.numberOfChannels;
+      var channels = [];
+      var savedChannel = img.selectedChannel;
+      try {
+         for (var c = 0; c < numChannels; c++) {
+            img.selectedChannel = c;
+            channels.push({
+               channel: c,
+               mean: img.mean(),
+               median: img.median(),
+               stdDev: img.stdDev(),
+               mad: img.MAD(),
+               minimum: img.minimum(),
+               maximum: img.maximum()
+            });
+         }
+      } finally {
+         img.selectedChannel = savedChannel;
+      }
+
+      return {
+         viewId: view.id,
+         fullId: view.fullId,
+         width: img.width,
+         height: img.height,
+         numberOfChannels: numChannels,
+         channels: channels
       };
    }
 }
