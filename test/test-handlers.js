@@ -179,6 +179,12 @@ function loadHandlers() {
 
   vm.runInContext(code, sandbox, { filename: "handlers.jsh" });
 
+  // handlers.jsh declares `class CommandDispatcher`. Top-level `class`
+  // declarations live in the context's lexical scope, not as own properties
+  // of the context's global object (unlike `var`/`function`), so pull the
+  // binding out explicitly for callers that access it as sandbox.CommandDispatcher.
+  sandbox.CommandDispatcher = vm.runInContext("CommandDispatcher", sandbox);
+
   return sandbox;
 }
 

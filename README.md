@@ -26,13 +26,13 @@ PixInsight MCP Bridge runs as a PixInsight script that spawns a local Node.js HT
 
 The bridge uses a hybrid architecture:
 
-1. **PJSR Script** (`pixinsight-mcp-bridge.js`) — Runs inside PixInsight's JavaScript runtime (ECMA 262-5/ES5). Handles all PixInsight API interactions and spawns the HTTP server via `ExternalProcess`.
+1. **PJSR Script** (`pixinsight-mcp-bridge.js`) — Runs inside PixInsight's V8 JavaScript runtime (ECMAScript 2025). Handles all PixInsight API interactions and spawns the HTTP server via `ExternalProcess`.
 2. **Node.js Bridge Server** (`bridge/server.js`) — Handles MCP protocol communication over HTTP. Supports both legacy SSE transport (spec 2024-11-05) and Streamable HTTP transport (spec 2025-03-26).
 3. **IPC Layer** — Line-delimited JSON over stdin/stdout pipes between the two processes.
 
 ## Requirements
 
-- **PixInsight** 1.8.x or later
+- **PixInsight** 1.9.4 or later (V8 JavaScript runtime)
 - **Node.js** >= 14.0.0 (must be in PATH or at a standard install location)
 
 ## Installation
@@ -230,9 +230,9 @@ The bridge supports two MCP transports:
 ```
 pixinsight-mcp-bridge/
 ├── src/
-│   ├── pixinsight-mcp-bridge.js    # Main PJSR entry point (ES5)
+│   ├── pixinsight-mcp-bridge.js    # Main PJSR entry point (V8)
 │   ├── lib/
-│   │   └── handlers.jsh            # PixInsight command handlers (ES5)
+│   │   └── handlers.jsh            # PixInsight command handlers (V8)
 │   └── bridge/
 │       ├── server.js               # Node.js HTTP/SSE MCP server
 │       ├── mcp-handler.js          # MCP protocol logic
@@ -249,7 +249,7 @@ pixinsight-mcp-bridge/
 ### Key Design Decisions
 
 - **Hybrid architecture**: PixInsight's PJSR runtime has no HTTP server capability (`NetworkTransfer` is client-only). The solution uses `ExternalProcess` to spawn a Node.js HTTP server and communicates via stdin/stdout IPC.
-- **ES5 compliance**: All PJSR code (`*.js` and `*.jsh` in `src/`) is ECMA 262-5 compliant — no `let`/`const`, no arrow functions, no template literals, no classes, no promises.
+- **V8 runtime**: All PJSR code (`*.js` and `*.jsh` in `src/`) targets PixInsight's V8 JavaScript runtime (`#engine v8`, PixInsight ≥1.9.4) and uses modern ECMAScript (`let`/`const`, `class`, arrow functions, template literals) rather than the legacy SpiderMonkey ES5 style.
 - **Zero dependencies**: The Node.js bridge server uses only built-in modules (`http`, `url`, `crypto`). No npm install required.
 - **Process registry**: Since PJSR doesn't expose a direct "list all processes" API, the bridge maintains a curated registry of known processes and verifies availability at runtime via constructor detection.
 
