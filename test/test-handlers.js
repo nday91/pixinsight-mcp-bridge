@@ -62,7 +62,7 @@ function createMockPI() {
     this.isNull = false;
     var imgData = mockImages[mainViewId || id] || mockImages[id];
     this.image = imgData || { width: 0, height: 0, numberOfChannels: 0, isColor: false, bitsPerSample: 0 };
-    this.window = { bringToFront: function () { }, currentView: this };
+    this.window = { bringToFront: function () { }, currentView: this, undo: function () { } };
     this.beginProcess = function () { };
     this.endProcess = function () { };
   }
@@ -598,5 +598,42 @@ describe("CommandDispatcher - load_image", function () {
     var result = dispatcher.dispatch("load_image", { filePath: "/images/nonexistent-format.xisf" });
     assert.ok(result.error);
     assert.ok(result.error.message.indexOf("Failed to load image") !== -1);
+  });
+});
+
+describe("CommandDispatcher - undo", function () {
+  it("undoes the last process on a specific view", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("undo", { viewId: "Image01" });
+    assert.ok(result.result);
+    assert.strictEqual(result.result.viewId, "Image01");
+    assert.ok(result.result.message.indexOf("Undo applied") !== -1);
+  });
+
+  it("undoes the active view when viewId omitted", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("undo", {});
+    assert.ok(result.result);
+    assert.ok(result.result.viewId);
+  });
+
+  it("returns error for non-existent view", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("undo", { viewId: "NoSuchView" });
+    assert.ok(result.error);
+    assert.ok(result.error.message.indexOf("View not found") !== -1);
+  });
+
+  it("propagates errors thrown by window.undo()", function () {
+    var sandbox = loadHandlers();
+    var view = sandbox.View.viewById("Image01");
+    view.window.undo = function () { throw "Nothing to undo"; };
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("undo", { viewId: "Image01" });
+    assert.ok(result.error);
+    assert.ok(result.error.message.indexOf("Nothing to undo") !== -1);
   });
 });

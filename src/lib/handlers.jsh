@@ -62,6 +62,10 @@ class CommandDispatcher {
       this._handlers["load_image"] = function(params) {
          return self._loadImage(params);
       };
+
+      this._handlers["undo"] = function(params) {
+         return self._undo(params);
+      };
    }
 
    /**
@@ -629,6 +633,27 @@ class CommandDispatcher {
          filePath: filePath,
          windowCount: windows.length,
          views: views
+      };
+   }
+
+   // =========================================================================
+   // undo - Undo the last process applied to a view's window
+   // =========================================================================
+
+   _undo(params) {
+      var view = this._resolveView(params.viewId);
+      var w = view.window;
+
+      // No pre-check here: canUndo/isUndoAvailable aren't real ImageWindow
+      // properties (they don't exist - checking them is always falsy,
+      // regardless of actual undo state). Let undo() itself define
+      // "nothing to undo" behavior.
+      w.undo();
+
+      return {
+         viewId: view.id,
+         fullId: view.fullId,
+         message: "Undo applied to view '" + view.id + "'"
       };
    }
 }

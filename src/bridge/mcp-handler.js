@@ -124,6 +124,19 @@ var TOOLS = [
       },
       required: ["filePath"]
     }
+  },
+  {
+    name: "undo",
+    description: "Undo the last process applied to a view's image window.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        viewId: {
+          type: "string",
+          description: "The ID of the view to undo. If omitted, uses the currently focused view."
+        }
+      }
+    }
   }
 ];
 

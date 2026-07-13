@@ -180,6 +180,14 @@ function createMockHandler(command, callback) {
         note: "Running in standalone mode - simulating a loaded image"
       });
       break;
+    case "undo":
+      callback(null, {
+        viewId: command.params.viewId || "Image01",
+        fullId: command.params.viewId || "Image01",
+        message: "Undo applied to view '" + (command.params.viewId || "Image01") + "'",
+        note: "Running in standalone mode - simulating undo"
+      });
+      break;
     default:
       callback(new Error("Unknown command: " + command.command));
   }
