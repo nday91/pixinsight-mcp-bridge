@@ -33,7 +33,6 @@ CoreApplication.ensureMinimumVersion( 1, 9, 4 );
 
 var MCP_BRIDGE_VERSION = "1.1.0";
 var DEFAULT_PORT = 3189;
-var POLL_INTERVAL_MS = 50;    // How often to check for incoming commands (ms)
 var SETTINGS_KEY_CUSTOM_PROCESSES = "MCPBridge/CustomProcesses";
 var NODE_SEARCH_PATHS = [
    "/usr/local/bin/node",
@@ -151,6 +150,17 @@ class IPCProcessor {
          var line = lines[i].trim();
          if (line.length === 0) continue;
 
+         // IPC command messages are always JSON objects ("{...}"). Plain-text
+         // log lines (e.g. "[MCP Bridge] Server listening...") can end up on
+         // this same channel too - ExternalProcess doesn't reliably keep
+         // stdout/stderr separate in all environments - so route non-JSON
+         // lines to the console as log output instead of treating them as
+         // malformed commands.
+         if (line.charAt(0) !== "{") {
+            Console.writeln(line);
+            continue;
+         }
+
          try {
             var msg = JSON.parse(line);
             this._handleCommand(msg);
@@ -196,7 +206,6 @@ class MCPBridgeController {
       this._serverProcess = null;
       this._ipcProcessor = null;
       this._dispatcher = new CommandDispatcher();
-      this._timer = null;
       this._running = false;
       this._port = DEFAULT_PORT;
       this._nodePath = null;
@@ -250,6 +259,18 @@ class MCPBridgeController {
 
       var self = this;
 
+      // Set up stdout handler to receive IPC command lines from the server.
+      // Event-driven (mirrors the stderr handler below) rather than polled,
+      // so command data is consumed as soon as it arrives instead of on a
+      // fixed timer tick racing against process I/O.
+      this._serverProcess.onStandardOutputDataAvailable = function() {
+         try {
+            self._ipcProcessor.processAvailableData();
+         } catch (e) {
+            Console.warningln("[MCP Bridge] Error processing IPC data: " + String(e));
+         }
+      };
+
       // Set up stderr handler to capture server log messages
       this._serverProcess.onStandardErrorDataAvailable = function() {
          try {
@@ -294,17 +315,6 @@ class MCPBridgeController {
          return false;
       }
 
-      // Set up polling timer for IPC
-      this._timer = new Timer();
-      this._timer.interval = POLL_INTERVAL_MS / 1000.0; // Timer uses seconds
-      this._timer.periodic = true;
-      this._timer.onTimeout = function() {
-         if (self._running && self._serverProcess.isRunning) {
-            self._ipcProcessor.processAvailableData();
-         }
-      };
-      this._timer.start();
-
       this._running = true;
       Console.writeln("[MCP Bridge] Bridge started successfully!");
       Console.writeln("[MCP Bridge] MCP endpoint: http://127.0.0.1:" + this._port + "/sse");
@@ -318,11 +328,6 @@ class MCPBridgeController {
     */
    stop() {
       this._running = false;
-
-      if (this._timer) {
-         this._timer.stop();
-         this._timer = null;
-      }
 
       if (this._serverProcess && this._serverProcess.isRunning) {
          Console.writeln("[MCP Bridge] Stopping server process...");
