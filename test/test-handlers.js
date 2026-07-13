@@ -149,6 +149,9 @@ function loadHandlers() {
       },
       remove: function () { }
     },
+    FileFormat: function (nameExtOrMime, toRead, toWrite) {
+      this.isNull = false;
+    },
     FileFormatInstance: function (fmt) {
       this.isNull = false;
       this.imageOptions = { bitsPerSample: 8 };

@@ -474,10 +474,17 @@ class CommandDispatcher {
       var tmpDir = File.systemTempDirectory;
       var tmpFile = tmpDir + "/pixinsight_mcp_" + view.id + "_" + Date.now() + ".jpg";
 
-      // Use FileFormatInstance to write the view as JPEG
-      var fmt = new FileFormatInstance("JPEG");
-      if (fmt.isNull) {
+      // Use FileFormatInstance to write the view as JPEG.
+      // FileFormatInstance requires a FileFormat object, not a bare name
+      // string - look up the JPEG format by extension first.
+      var jpegFormat = new FileFormat(".jpg", false, true);
+      if (jpegFormat.isNull) {
          throw "JPEG file format is not available";
+      }
+
+      var fmt = new FileFormatInstance(jpegFormat);
+      if (fmt.isNull) {
+         throw "Failed to create JPEG file format instance";
       }
 
       var base64Data;
@@ -486,9 +493,14 @@ class CommandDispatcher {
             throw "Failed to create temp file: " + tmpFile;
          }
 
+         // JPEG only ever supports 8-bit samples, so the format instance
+         // should already default to that; only override if imageOptions
+         // is actually exposed (it isn't guaranteed across PJSR versions).
          var options = fmt.imageOptions;
-         options.bitsPerSample = 8;
-         fmt.imageOptions = options;
+         if (options) {
+            options.bitsPerSample = 8;
+            fmt.imageOptions = options;
+         }
 
          if (typeof fmt.jpegQuality !== "undefined") {
             fmt.jpegQuality = 92;
