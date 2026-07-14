@@ -188,6 +188,17 @@ function createMockHandler(command, callback) {
         note: "Running in standalone mode - simulating undo"
       });
       break;
+    case "describe_process":
+      callback(null, {
+        processId: command.params.processId,
+        parameterCount: 2,
+        parameters: [
+          { name: "expression", type: "string", value: "" },
+          { name: "useSingleExpression", type: "boolean", value: false }
+        ],
+        note: "Running in standalone mode - showing sample parameters"
+      });
+      break;
     default:
       callback(new Error("Unknown command: " + command.command));
   }

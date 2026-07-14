@@ -66,6 +66,10 @@ class CommandDispatcher {
       this._handlers["undo"] = function(params) {
          return self._undo(params);
       };
+
+      this._handlers["describe_process"] = function(params) {
+         return self._describeProcess(params);
+      };
    }
 
    /**
@@ -654,6 +658,60 @@ class CommandDispatcher {
          viewId: view.id,
          fullId: view.fullId,
          message: "Undo applied to view '" + view.id + "'"
+      };
+   }
+
+   // =========================================================================
+   // describe_process - Enumerate a process instance's actual parameters
+   // =========================================================================
+
+   /**
+    * invoke_process sets whatever properties are passed via P[key] = value,
+    * which silently no-ops for unrecognized names instead of erroring - so
+    * guessing parameter names (e.g. from third-party plugin docs) is unsafe.
+    * This constructs a real instance and enumerates its own properties
+    * directly, giving authoritative names/current values instead of guesses.
+    */
+   _describeProcess(params) {
+      var processId = params.processId;
+      if (!processId) {
+         throw "processId is required";
+      }
+
+      var ProcessConstructor;
+      try {
+         ProcessConstructor = eval(processId);
+         if (typeof ProcessConstructor !== "function") {
+            throw "not a function";
+         }
+      } catch (e) {
+         throw "Process '" + processId + "' is not available: " + String(e);
+      }
+
+      var P = new ProcessConstructor();
+
+      var parameters = [];
+      for (var key in P) {
+         var value;
+         try {
+            value = P[key];
+         } catch (e) {
+            continue;
+         }
+         if (typeof value === "function") {
+            continue;
+         }
+         parameters.push({
+            name: key,
+            type: typeof value,
+            value: value
+         });
+      }
+
+      return {
+         processId: processId,
+         parameterCount: parameters.length,
+         parameters: parameters
       };
    }
 }

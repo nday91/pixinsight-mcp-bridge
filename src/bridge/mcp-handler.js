@@ -137,6 +137,20 @@ var TOOLS = [
         }
       }
     }
+  },
+  {
+    name: "describe_process",
+    description: "Enumerate the actual parameter names and current default values of a PixInsight process instance. Use this to discover real parameter names before calling invoke_process, since unrecognized parameter names are silently ignored rather than rejected.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        processId: {
+          type: "string",
+          description: "The PixInsight process identifier to describe (e.g. 'BlurXTerminator', 'PixelMath')."
+        }
+      },
+      required: ["processId"]
+    }
   }
 ];
 
@@ -357,6 +371,11 @@ MCPHandler.prototype._validateToolParams = function (toolName, args) {
     case "load_image":
       if (!args.filePath || typeof args.filePath !== "string") {
         return "load_image requires a 'filePath' string parameter";
+      }
+      break;
+    case "describe_process":
+      if (!args.processId || typeof args.processId !== "string") {
+        return "describe_process requires a 'processId' string parameter";
       }
       break;
   }

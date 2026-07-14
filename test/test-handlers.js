@@ -637,3 +637,34 @@ describe("CommandDispatcher - undo", function () {
     assert.ok(result.error.message.indexOf("Nothing to undo") !== -1);
   });
 });
+
+describe("CommandDispatcher - describe_process", function () {
+  it("enumerates a process instance's data properties, excluding methods", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("describe_process", { processId: "PixelMath" });
+    assert.ok(result.result);
+    assert.strictEqual(result.result.processId, "PixelMath");
+    var names = result.result.parameters.map(function (p) { return p.name; });
+    assert.ok(names.indexOf("expression") !== -1);
+    assert.strictEqual(names.indexOf("executeOn"), -1);
+    assert.strictEqual(names.indexOf("canExecuteOn"), -1);
+    assert.strictEqual(result.result.parameterCount, result.result.parameters.length);
+  });
+
+  it("returns error when processId is missing", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("describe_process", {});
+    assert.ok(result.error);
+    assert.ok(result.error.message.indexOf("processId is required") !== -1);
+  });
+
+  it("returns error for an unavailable process", function () {
+    var sandbox = loadHandlers();
+    var dispatcher = new sandbox.CommandDispatcher();
+    var result = dispatcher.dispatch("describe_process", { processId: "NoSuchProcess" });
+    assert.ok(result.error);
+    assert.ok(result.error.message.indexOf("is not available") !== -1);
+  });
+});
