@@ -63,8 +63,8 @@ function findNodePath() {
       var cmd = (platform === "MSWINDOWS" || platform === "Windows") ? "where" : "which";
       var proc = new ExternalProcess();
       proc.start(cmd, ["node"]);
-      for (; proc.isStarting; ) processEvents();
-      for (; proc.isRunning; ) processEvents();
+      for (; proc.isStarting; ) CoreApplication.processEvents();
+      for (; proc.isRunning; ) CoreApplication.processEvents();
       if (proc.exitCode === 0) {
          var path = proc.standardOutput.toString().trim().split("\n")[0].trim();
          if (path.length > 0) {
@@ -302,8 +302,8 @@ class MCPBridgeController {
 
          // Wait for process to start
          for (var i = 0; i < 50 && this._serverProcess.isStarting; i++) {
-            processEvents();
-            msleep(100);
+            CoreApplication.processEvents();
+            System.msleep(100);
          }
 
          if (!this._serverProcess.isRunning) {
@@ -336,8 +336,8 @@ class MCPBridgeController {
             // Wait for termination
             for (var i = 0; i < 30; i++) {
                if (!this._serverProcess.isRunning) break;
-               processEvents();
-               msleep(100);
+               CoreApplication.processEvents();
+               System.msleep(100);
             }
             if (this._serverProcess.isRunning) {
                this._serverProcess.kill();
