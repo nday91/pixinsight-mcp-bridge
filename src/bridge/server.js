@@ -15,7 +15,6 @@
  */
 
 var http = require("http");
-var url = require("url");
 var crypto = require("crypto");
 var MCPHandlerModule = require("./mcp-handler");
 var IPCModule = require("./ipc");
@@ -258,7 +257,9 @@ BridgeServer.prototype.stop = function (callback) {
 };
 
 BridgeServer.prototype._handleRequest = function (req, res) {
-  var parsed = url.parse(req.url, true);
+  // Base URL is a placeholder - only pathname/searchParams are used, and
+  // this server only ever binds to 127.0.0.1 (see start()).
+  var parsed = new URL(req.url, "http://localhost");
   var pathname = parsed.pathname;
 
   // CORS headers for local development
@@ -283,7 +284,7 @@ BridgeServer.prototype._handleRequest = function (req, res) {
       break;
     case "/messages":
       if (req.method === "POST") {
-        return this._handleSSEMessage(req, res, parsed.query);
+        return this._handleSSEMessage(req, res, parsed.searchParams);
       }
       break;
 
@@ -344,7 +345,7 @@ BridgeServer.prototype._handleSSEConnect = function (req, res) {
  * POST /messages?sessionId=<id> - Client sends JSON-RPC message.
  */
 BridgeServer.prototype._handleSSEMessage = function (req, res, query) {
-  var sessionId = query.sessionId;
+  var sessionId = query.get("sessionId");
   var session = this._sessions.get(sessionId);
 
   if (!session) {
